@@ -117,7 +117,7 @@ func OAuthLoginHandler() gin.HandlerFunc {
 			}
 			// during the init of OAuthProvider authorizer url might be empty
 			oauth.OAuthProviders.GoogleConfig.RedirectURL = hostname + "/oauth_callback/" + constants.AuthRecipeMethodGoogle
-			url := oauth.OAuthProviders.GoogleConfig.AuthCodeURL(oauthStateString)
+			url := oauth.OAuthProviders.GoogleConfig.AuthCodeURL(oauthStateString) + "&prompt=select_account"
 			c.Redirect(http.StatusTemporaryRedirect, url)
 		case constants.AuthRecipeMethodGithub:
 			if oauth.OAuthProviders.GithubConfig == nil {

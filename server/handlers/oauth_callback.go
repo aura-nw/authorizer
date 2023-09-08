@@ -84,6 +84,11 @@ func OAuthCallbackHandler() gin.HandlerFunc {
 		}
 
 		existingUser, err := db.Provider.GetUserByEmail(ctx, user.Email)
+
+		if err != nil && provider == constants.AuthRecipeMethodFacebook {
+			existingUser, err = db.Provider.GetUserByFbId(ctx, user.FbId)
+		}
+
 		log := log.WithField("user", user.Email)
 		isSignUp := false
 
@@ -124,8 +129,11 @@ func OAuthCallbackHandler() gin.HandlerFunc {
 			}
 
 			user.Roles = strings.Join(inputRoles, ",")
-			now := time.Now().Unix()
-			user.EmailVerifiedAt = &now
+
+			if user.Email != "<nil>" {
+				now := time.Now().Unix()
+				user.EmailVerifiedAt = &now
+			}
 			user, _ = db.Provider.AddUser(ctx, user)
 			isSignUp = true
 		} else {
@@ -144,7 +152,7 @@ func OAuthCallbackHandler() gin.HandlerFunc {
 			}
 			user.SignupMethods = signupMethod
 
-			if user.EmailVerifiedAt == nil {
+			if user.EmailVerifiedAt == nil && user.Email != "<nil>" {
 				now := time.Now().Unix()
 				user.EmailVerifiedAt = &now
 			}
@@ -309,6 +317,9 @@ func processGoogleUserInfo(code string) (models.User, error) {
 		return user, fmt.Errorf("unable to extract claims")
 	}
 
+	qualityPicture := strings.ReplaceAll(*user.Picture, "s96-c", "s384-c")
+	user.Picture = &qualityPicture
+
 	return user, nil
 }
 
@@ -459,12 +470,14 @@ func processFacebookUserInfo(code string) (models.User, error) {
 	firstName := fmt.Sprintf("%v", userRawData["first_name"])
 	lastName := fmt.Sprintf("%v", userRawData["last_name"])
 	picture := fmt.Sprintf("%v", picDataObject["url"])
+	fbId := fmt.Sprintf("%v", userRawData["id"])
 
 	user = models.User{
 		GivenName:  &firstName,
 		FamilyName: &lastName,
 		Picture:    &picture,
 		Email:      email,
+		FbId:       fbId,
 	}
 
 	return user, nil

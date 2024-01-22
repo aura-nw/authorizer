@@ -107,6 +107,18 @@ func MetaResolver(ctx context.Context) (*model.Meta, error) {
 		microsoftActiveDirTenantID = ""
 	}
 
+	zaloAppID, err := memorystore.Provider.GetStringStoreEnvVariable(constants.EnvKeyZaloAppID)
+	if err != nil {
+		log.Debug("Failed to get Zalo App ID from environment variable", err)
+		zaloAppID = ""
+	}
+
+	zaloAppSecret, err := memorystore.Provider.GetStringStoreEnvVariable(constants.EnvKeyZaloAppSecret)
+	if err != nil {
+		log.Debug("Failed to get Zalo App Secret from environment variable", err)
+		zaloAppSecret = ""
+	}
+
 	isBasicAuthDisabled, err := memorystore.Provider.GetBoolStoreEnvVariable(constants.EnvKeyDisableBasicAuthentication)
 	if err != nil {
 		log.Debug("Failed to get Disable Basic Authentication from environment variable", err)
@@ -153,6 +165,7 @@ func MetaResolver(ctx context.Context) (*model.Meta, error) {
 		IsAppleLoginEnabled:          appleClientID != "" && appleClientSecret != "",
 		IsTwitterLoginEnabled:        twitterClientID != "" && twitterClientSecret != "",
 		IsMicrosoftLoginEnabled:      microsoftClientID != "" && microsoftClientSecret != "" && microsoftActiveDirTenantID != "",
+		IsZaloLoginEnabled:           zaloAppID != "" && zaloAppSecret != "",
 		IsBasicAuthenticationEnabled: !isBasicAuthDisabled,
 		IsEmailVerificationEnabled:   !isEmailVerificationDisabled,
 		IsMagicLinkLoginEnabled:      !isMagicLinkLoginDisabled,

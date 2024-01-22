@@ -20,6 +20,8 @@ type Provider interface {
 	GetUserByEmail(ctx context.Context, email string) (models.User, error)
 	// GetUserByFbID to get user information from database using facebook Id
 	GetUserByFbId(ctx context.Context, fbId string) (models.User, error)
+	// GetUserByZaloID to get user information from database using facebook Id
+	GetUserByZaloId(ctx context.Context, zaloId string) (models.User, error)
 	// GetUserByPhoneNumber to get user information from database using phone number
 	GetUserByPhoneNumber(ctx context.Context, phoneNumber string) (*models.User, error)
 	// GetUserByID to get user information from database using user ID

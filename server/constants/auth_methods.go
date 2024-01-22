@@ -21,4 +21,6 @@ const (
 	AuthRecipeMethodTwitter = "twitter"
 	// AuthRecipeMethodMicrosoft is the microsoft auth method
 	AuthRecipeMethodMicrosoft = "microsoft"
+	// AuthRecipeMethodMicrosoft is the microsoft auth method
+	AuthRecipeMethodZalo = "zalo"
 )

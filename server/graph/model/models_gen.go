@@ -114,6 +114,8 @@ type Env struct {
 	MicrosoftClientID                *string  `json:"MICROSOFT_CLIENT_ID"`
 	MicrosoftClientSecret            *string  `json:"MICROSOFT_CLIENT_SECRET"`
 	MicrosoftActiveDirectoryTenantID *string  `json:"MICROSOFT_ACTIVE_DIRECTORY_TENANT_ID"`
+	ZaloAppID                *string  `json:"ZALO_APP_ID"`
+	ZaloAppSecret            *string  `json:"ZALO_APP_SECRET"`
 	OrganizationName                 *string  `json:"ORGANIZATION_NAME"`
 	OrganizationLogo                 *string  `json:"ORGANIZATION_LOGO"`
 	AppCookieSecure                  bool     `json:"APP_COOKIE_SECURE"`
@@ -189,6 +191,7 @@ type Meta struct {
 	IsAppleLoginEnabled          bool   `json:"is_apple_login_enabled"`
 	IsTwitterLoginEnabled        bool   `json:"is_twitter_login_enabled"`
 	IsMicrosoftLoginEnabled      bool   `json:"is_microsoft_login_enabled"`
+	IsZaloLoginEnabled      bool   `json:"is_zalo_login_enabled"`
 	IsEmailVerificationEnabled   bool   `json:"is_email_verification_enabled"`
 	IsBasicAuthenticationEnabled bool   `json:"is_basic_authentication_enabled"`
 	IsMagicLinkLoginEnabled      bool   `json:"is_magic_link_login_enabled"`

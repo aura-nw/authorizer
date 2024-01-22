@@ -101,6 +101,25 @@ func OAuthLoginHandler() gin.HandlerFunc {
 		provider := c.Param("oauth_provider")
 		isProviderConfigured := true
 		switch provider {
+		case constants.AuthRecipeMethodZalo:
+			log.Info("========== ZALO OAuth provider ============")
+			log.Info(oauth.OAuthProviders.ZaloConfig.ClientID)
+			if oauth.OAuthProviders.ZaloConfig == nil {
+				log.Debug("Zalo OAuth provider is not configured")
+				isProviderConfigured = false
+				break
+			}
+			err := memorystore.Provider.SetState(oauthStateString, constants.AuthRecipeMethodZalo)
+			if err != nil {
+				log.Debug("Error setting state: ", err)
+				c.JSON(500, gin.H{
+					"error": "internal server error",
+				})
+				return
+			}
+			oauth.OAuthProviders.ZaloConfig.RedirectURL = hostname + "/oauth_callback/" + constants.AuthRecipeMethodZalo
+			url := oauth.OAuthProviders.ZaloConfig.AuthCodeURL(oauthStateString) + "&app_id=" + oauth.OAuthProviders.ZaloConfig.ClientID
+			c.Redirect(http.StatusTemporaryRedirect, url)
 		case constants.AuthRecipeMethodGoogle:
 			if oauth.OAuthProviders.GoogleConfig == nil {
 				log.Debug("Google OAuth provider is not configured")

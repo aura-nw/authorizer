@@ -79,6 +79,8 @@ func InitAllEnv() error {
 	osMicrosoftClientID := os.Getenv(constants.EnvKeyMicrosoftClientID)
 	osMicrosoftClientSecret := os.Getenv(constants.EnvKeyMicrosoftClientSecret)
 	osMicrosoftActiveDirectoryTenantID := os.Getenv(constants.EnvKeyMicrosoftActiveDirectoryTenantID)
+	osZaloAppID := os.Getenv(constants.EnvKeyZaloAppID)
+	osZaloAppSecret := os.Getenv(constants.EnvKeyZaloAppSecret)
 	osResetPasswordURL := os.Getenv(constants.EnvKeyResetPasswordURL)
 	osOrganizationName := os.Getenv(constants.EnvKeyOrganizationName)
 	osOrganizationLogo := os.Getenv(constants.EnvKeyOrganizationLogo)
@@ -480,6 +482,20 @@ func InitAllEnv() error {
 	}
 	if osMicrosoftClientSecret != "" && envData[constants.EnvKeyMicrosoftClientSecret] != osMicrosoftClientSecret {
 		envData[constants.EnvKeyMicrosoftClientSecret] = osMicrosoftClientSecret
+	}
+
+	if val, ok := envData[constants.EnvKeyZaloAppID]; !ok || val == "" {
+		envData[constants.EnvKeyZaloAppID] = osZaloAppID
+	}
+	if osZaloAppID != "" && envData[constants.EnvKeyZaloAppID] != osZaloAppID {
+		envData[constants.EnvKeyZaloAppID] = osZaloAppID
+	}
+
+	if val, ok := envData[constants.EnvKeyZaloAppSecret]; !ok || val == "" {
+		envData[constants.EnvKeyZaloAppSecret] = osZaloAppSecret
+	}
+	if osZaloAppSecret != "" && envData[constants.EnvKeyZaloAppSecret] != osZaloAppSecret {
+		envData[constants.EnvKeyZaloAppSecret] = osZaloAppSecret
 	}
 
 	if val, ok := envData[constants.EnvKeyMicrosoftActiveDirectoryTenantID]; !ok || val == "" {

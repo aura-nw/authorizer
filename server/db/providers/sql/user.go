@@ -119,10 +119,21 @@ func (p *provider) GetUserByEmail(ctx context.Context, email string) (models.Use
 	return user, nil
 }
 
-// GetUserByFbId to get user information from database using email address
+// GetUserByFbId to get user information from database using facebook id
 func (p *provider) GetUserByFbId(ctx context.Context, fbId string) (models.User, error) {
 	var user models.User
 	result := p.db.Where("fb_id = ?", fbId).First(&user)
+	if result.Error != nil {
+		return user, result.Error
+	}
+
+	return user, nil
+}
+
+// GetUserByZaloID to get user information from database using zalo id
+func (p *provider) GetUserByZaloId(ctx context.Context, zaloId string) (models.User, error) {
+	var user models.User
+	result := p.db.Where("zalo_id = ?", zaloId).First(&user)
 	if result.Error != nil {
 		return user, result.Error
 	}

@@ -116,6 +116,10 @@ const (
 	EnvKeyMicrosoftActiveDirectoryTenantID = "MICROSOFT_ACTIVE_DIRECTORY_TENANT_ID"
 	// EnvKeyMicrosoftClientSecret key for env variable MICROSOFT_CLIENT_SECRET
 	EnvKeyMicrosoftClientSecret = "MICROSOFT_CLIENT_SECRET"
+	// EnvKeyZaloAppID key for env variable ZALO_APP_ID
+	EnvKeyZaloAppID = "ZALO_APP_ID"
+	// EnvKeyZaloAppSecret key for env variable ZALO_APP_SECRET
+	EnvKeyZaloAppSecret = "ZALO_APP_SECRET"
 	// EnvKeyOrganizationName key for env variable ORGANIZATION_NAME
 	EnvKeyOrganizationName = "ORGANIZATION_NAME"
 	// EnvKeyOrganizationLogo key for env variable ORGANIZATION_LOGO

@@ -200,9 +200,16 @@ func (p *provider) ListUsers(ctx context.Context, pagination model.Pagination) (
 	}, nil
 }
 
-// GetUserByFbId to get user information from database using email address
+// GetUserByFbId to get user information from database using facebook id
 // TODO: implement this
 func (p *provider) GetUserByFbId(ctx context.Context, fbId string) (models.User, error) {
+	var user models.User
+	return user, nil
+}
+
+// GetUserByZaloID to get user information from database using zalo id
+// TODO: implement this
+func (p *provider) GetUserByZaloId(ctx context.Context, zaloId string) (models.User, error) {
 	var user models.User
 	return user, nil
 }

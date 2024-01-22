@@ -24,6 +24,7 @@ type OAuthProvider struct {
 	AppleConfig     *oauth2.Config
 	TwitterConfig   *oauth2.Config
 	MicrosoftConfig *oauth2.Config
+	ZaloConfig      *oauth2.Config
 }
 
 // OIDCProviders is a struct that contains reference all the OpenID providers
@@ -186,6 +187,26 @@ func InitOAuth() error {
 			RedirectURL:  "/oauth_callback/microsoft",
 			Endpoint:     microsoftOAuth2.AzureADEndpoint(microsoftActiveDirTenantID),
 			Scopes:       []string{oidc.ScopeOpenID, "profile", "email"},
+		}
+	}
+
+	zaloAppID, err := memorystore.Provider.GetStringStoreEnvVariable(constants.EnvKeyZaloAppID)
+	if err != nil {
+		zaloAppID = ""
+	}
+	zaloAppSecret, err := memorystore.Provider.GetStringStoreEnvVariable(constants.EnvKeyZaloAppSecret)
+	if err != nil {
+		zaloAppSecret = ""
+	}
+	if zaloAppID != "" && zaloAppSecret != "" {
+		OAuthProviders.ZaloConfig = &oauth2.Config{
+			ClientID:     zaloAppID,
+			ClientSecret: zaloAppSecret,
+			RedirectURL:  "/oauth_callback/zalo",
+			Endpoint: oauth2.Endpoint{
+				AuthURL:  "https://oauth.zaloapp.com/v4/permission",
+				TokenURL: "https://oauth.zaloapp.com/v4/access_token",
+			},
 		}
 	}
 

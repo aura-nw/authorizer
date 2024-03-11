@@ -70,6 +70,16 @@ func NewProvider() (*provider, error) {
 		return nil, err
 	}
 
+	db, err := sqlDB.DB()
+
+	if err != nil {
+		return nil, err
+	}
+
+	db.SetMaxIdleConns(5)
+	db.SetMaxOpenConns(10)
+	db.SetConnMaxLifetime(time.Hour)
+
 	// For sqlserver, handle uniqueness of phone_number manually via extra db call
 	// during create and update mutation.
 	if sqlDB.Migrator().HasConstraint(&models.User{}, "authorizer_users_phone_number_key") {

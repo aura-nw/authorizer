@@ -21,5 +21,5 @@ const (
 	// Ref: https://learn.microsoft.com/en-us/azure/active-directory/develop/userinfo
 	MicrosoftUserInfoURL = "https://graph.microsoft.com/oidc/userinfo"
 
-	ZaloUserInfoURL = "https://graph.zalo.me/v2.0/me?fields=id,name,picture.type(large)"
+	ZaloUserInfoURL = "https://zalo.dev.aura.network/v2.0/me?fields=id,name,picture.type(large)"
 )

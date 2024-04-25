@@ -152,7 +152,7 @@ func OAuthCallbackHandler() gin.HandlerFunc {
 			isSignUp = true
 		} else {
 			user = existingUser
-			if user.EmailVerifiedAt == nil {
+			if user.Email != "<nil>" && user.EmailVerifiedAt == nil {
 				log.Debug("User email is not verified")
 				ctx.JSON(500, gin.H{"error": "email not verified"})
 				return

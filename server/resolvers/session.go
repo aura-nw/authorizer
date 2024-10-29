@@ -66,6 +66,12 @@ func SessionResolver(ctx context.Context, params *model.SessionQueryInput) (*mod
 		}
 	}
 
+	creator, err := db.Provider.GetCreatorByEmail(ctx, user.Email)
+	fmt.Println(creator)
+	if err == nil {
+		claimRoles = append(claimRoles, "creator")
+	}
+
 	scope := []string{"openid", "email", "profile"}
 	if params != nil && params.Scope != nil && len(scope) > 0 {
 		scope = params.Scope

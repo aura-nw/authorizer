@@ -94,6 +94,13 @@ func MobileLoginResolver(ctx context.Context, params model.MobileLoginInput) (*m
 		roles = params.Roles
 	}
 
+	creator, err := db.Provider.GetCreatorByEmail(ctx, user.Email)
+	fmt.Println(creator)
+	if err == nil {
+		roles = append(roles, "creator")
+		user.Roles = strings.Join(roles, ",")
+	}
+
 	scope := []string{"openid", "email", "profile"}
 	if params.Scope != nil && len(scope) > 0 {
 		scope = params.Scope

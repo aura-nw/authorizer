@@ -237,6 +237,14 @@ func SignupResolver(ctx context.Context, params model.SignUpInput) (*model.AuthR
 			User:    userToReturn,
 		}
 	} else {
+
+		creator, err := db.Provider.GetCreatorByEmail(ctx, user.Email)
+		fmt.Println(creator)
+		if err == nil {
+			roles = append(roles, "creator")
+			user.Roles = strings.Join(roles, ",")
+		}
+
 		scope := []string{"openid", "email", "profile"}
 		if params.Scope != nil && len(scope) > 0 {
 			scope = params.Scope

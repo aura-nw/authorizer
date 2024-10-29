@@ -1,14 +1,16 @@
 FROM golang:1.19.5-alpine as go-builder
 WORKDIR /authorizer
-COPY server server
-COPY Makefile .
 
 ARG VERSION="latest"
 ENV VERSION="$VERSION"
 
 RUN echo "$VERSION"
-RUN apk add build-base &&\
-    make clean && make && \
+RUN apk add build-base 
+
+COPY server server
+COPY Makefile .
+
+RUN make clean && make && \
     chmod 777 build/server
 
 FROM node:17-alpine3.12 as node-builder

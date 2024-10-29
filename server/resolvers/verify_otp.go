@@ -58,6 +58,14 @@ func VerifyOtpResolver(ctx context.Context, params model.VerifyOTPRequest) (*mod
 	loginMethod := constants.AuthRecipeMethodBasicAuth
 
 	roles := strings.Split(user.Roles, ",")
+
+	creator, err := db.Provider.GetCreatorByEmail(ctx, user.Email)
+	fmt.Println(creator)
+	if err == nil {
+		roles = append(roles, "creator")
+		user.Roles = strings.Join(roles, ",")
+	}
+
 	scope := []string{"openid", "email", "profile"}
 	code := ""
 	codeChallenge := ""

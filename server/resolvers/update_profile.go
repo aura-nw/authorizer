@@ -10,7 +10,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/authorizerdev/authorizer/server/constants"
-	"github.com/authorizerdev/authorizer/server/cookie"
 	"github.com/authorizerdev/authorizer/server/crypto"
 	"github.com/authorizerdev/authorizer/server/db"
 	"github.com/authorizerdev/authorizer/server/db/models"
@@ -216,8 +215,9 @@ func UpdateProfileResolver(ctx context.Context, params model.UpdateProfileInput)
 			return res, fmt.Errorf("user with this email address already exists")
 		}
 
-		go memorystore.Provider.DeleteAllUserSessions(user.ID)
-		go cookie.DeleteSession(gc)
+		// sign in with wallet => update user email and duplicate username => update again fail (loss session)
+		// go memorystore.Provider.DeleteAllUserSessions(user.ID)
+		// go cookie.DeleteSession(gc)
 
 		user.Email = newEmail
 		isEmailVerificationDisabled, err := memorystore.Provider.GetBoolStoreEnvVariable(constants.EnvKeyDisableEmailVerification)

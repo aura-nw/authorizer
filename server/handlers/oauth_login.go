@@ -102,8 +102,6 @@ func OAuthLoginHandler() gin.HandlerFunc {
 		isProviderConfigured := true
 		switch provider {
 		case constants.AuthRecipeMethodZalo:
-			log.Info("========== ZALO OAuth provider ============")
-			log.Info(oauth.OAuthProviders.ZaloConfig.ClientID)
 			if oauth.OAuthProviders.ZaloConfig == nil {
 				log.Debug("Zalo OAuth provider is not configured")
 				isProviderConfigured = false

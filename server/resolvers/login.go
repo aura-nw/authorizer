@@ -64,10 +64,10 @@ func LoginResolver(ctx context.Context, params model.LoginInput) (*model.AuthRes
 		return res, fmt.Errorf(`user has not signed up email & password`)
 	}
 
-	if user.EmailVerifiedAt == nil {
-		log.Debug("User email is not verified")
-		return res, fmt.Errorf(`email not verified`)
-	}
+	// if user.EmailVerifiedAt == nil {
+	// 	log.Debug("User email is not verified")
+	// 	return res, fmt.Errorf(`email not verified`)
+	// }
 
 	err = bcrypt.CompareHashAndPassword([]byte(*user.Password), []byte(params.Password))
 
@@ -93,6 +93,13 @@ func LoginResolver(ctx context.Context, params model.LoginInput) (*model.AuthRes
 		}
 
 		roles = params.Roles
+	}
+
+	creator, err := db.Provider.GetCreatorByEmail(ctx, user.Email)
+	fmt.Println(creator)
+	if err == nil {
+		roles = append(roles, "creator")
+		user.Roles = strings.Join(roles, ",")
 	}
 
 	scope := []string{"openid", "email", "profile"}

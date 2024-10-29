@@ -131,6 +131,8 @@ type ComplexityRoot struct {
 		SenderName                       func(childComplexity int) int
 		TwitterClientID                  func(childComplexity int) int
 		TwitterClientSecret              func(childComplexity int) int
+		ZaloAppID                        func(childComplexity int) int
+		ZaloAppSecret                    func(childComplexity int) int
 	}
 
 	Error struct {
@@ -164,6 +166,7 @@ type ComplexityRoot struct {
 		IsSignUpEnabled              func(childComplexity int) int
 		IsStrongPasswordEnabled      func(childComplexity int) int
 		IsTwitterLoginEnabled        func(childComplexity int) int
+		IsZaloLoginEnabled           func(childComplexity int) int
 		Version                      func(childComplexity int) int
 	}
 
@@ -191,6 +194,7 @@ type ComplexityRoot struct {
 		Revoke              func(childComplexity int, params model.OAuthRevokeInput) int
 		RevokeAccess        func(childComplexity int, param model.UpdateAccessInput) int
 		Signup              func(childComplexity int, params model.SignUpInput) int
+		Siwe                func(childComplexity int, params model.EvmWalletLoginInput) int
 		TestEndpoint        func(childComplexity int, params model.TestEndpointRequest) int
 		UpdateEmailTemplate func(childComplexity int, params model.UpdateEmailTemplateRequest) int
 		UpdateEnv           func(childComplexity int, params model.UpdateEnvInput) int
@@ -318,6 +322,7 @@ type MutationResolver interface {
 	Signup(ctx context.Context, params model.SignUpInput) (*model.AuthResponse, error)
 	MobileSignup(ctx context.Context, params *model.MobileSignUpInput) (*model.AuthResponse, error)
 	Login(ctx context.Context, params model.LoginInput) (*model.AuthResponse, error)
+	Siwe(ctx context.Context, params model.EvmWalletLoginInput) (*model.AuthResponse, error)
 	MobileLogin(ctx context.Context, params model.MobileLoginInput) (*model.AuthResponse, error)
 	MagicLinkLogin(ctx context.Context, params model.MagicLinkLoginInput) (*model.Response, error)
 	Logout(ctx context.Context) (*model.Response, error)
@@ -917,6 +922,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Env.TwitterClientSecret(childComplexity), true
 
+	case "Env.ZALO_APP_ID":
+		if e.complexity.Env.ZaloAppID == nil {
+			break
+		}
+
+		return e.complexity.Env.ZaloAppID(childComplexity), true
+
+	case "Env.ZALO_APP_SECRET":
+		if e.complexity.Env.ZaloAppSecret == nil {
+			break
+		}
+
+		return e.complexity.Env.ZaloAppSecret(childComplexity), true
+
 	case "Error.message":
 		if e.complexity.Error.Message == nil {
 			break
@@ -1063,6 +1082,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Meta.IsTwitterLoginEnabled(childComplexity), true
+
+	case "Meta.is_zalo_login_enabled":
+		if e.complexity.Meta.IsZaloLoginEnabled == nil {
+			break
+		}
+
+		return e.complexity.Meta.IsZaloLoginEnabled(childComplexity), true
 
 	case "Meta.version":
 		if e.complexity.Meta.Version == nil {
@@ -1336,6 +1362,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.Signup(childComplexity, args["params"].(model.SignUpInput)), true
+
+	case "Mutation.siwe":
+		if e.complexity.Mutation.Siwe == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_siwe_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.Siwe(childComplexity, args["params"].(model.EvmWalletLoginInput)), true
 
 	case "Mutation._test_endpoint":
 		if e.complexity.Mutation.TestEndpoint == nil {
@@ -2003,6 +2041,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputAdminSignupInput,
 		ec.unmarshalInputDeleteEmailTemplateRequest,
 		ec.unmarshalInputDeleteUserInput,
+		ec.unmarshalInputEvmWalletLoginInput,
 		ec.unmarshalInputForgotPasswordInput,
 		ec.unmarshalInputGenerateJWTKeysInput,
 		ec.unmarshalInputGetUserRequest,
@@ -2108,6 +2147,7 @@ type Pagination {
 type Meta {
   version: String!
   client_id: String!
+  is_zalo_login_enabled: Boolean!
   is_google_login_enabled: Boolean!
   is_facebook_login_enabled: Boolean!
   is_github_login_enabled: Boolean!
@@ -2248,6 +2288,8 @@ type Env {
   MICROSOFT_CLIENT_ID: String
   MICROSOFT_CLIENT_SECRET: String
   MICROSOFT_ACTIVE_DIRECTORY_TENANT_ID: String
+  ZALO_APP_ID: String
+  ZALO_APP_SECRET: String
   ORGANIZATION_NAME: String
   ORGANIZATION_LOGO: String
   APP_COOKIE_SECURE: Boolean!
@@ -2434,6 +2476,11 @@ input LoginInput {
   # it is used to get code for an on-going auth process during login
   # and use that code for setting ` + "`" + `c_hash` + "`" + ` in id_token
   state: String
+}
+
+input EvmWalletLoginInput {
+  message: String!
+  signature: String!
 }
 
 input MobileLoginInput {
@@ -2638,6 +2685,7 @@ type Mutation {
   signup(params: SignUpInput!): AuthResponse!
   mobile_signup(params: MobileSignUpInput): AuthResponse!
   login(params: LoginInput!): AuthResponse!
+  siwe(params: EvmWalletLoginInput!): AuthResponse!
   mobile_login(params: MobileLoginInput!): AuthResponse!
   magic_link_login(params: MagicLinkLoginInput!): Response!
   logout: Response!
@@ -3075,6 +3123,21 @@ func (ec *executionContext) field_Mutation_signup_args(ctx context.Context, rawA
 	if tmp, ok := rawArgs["params"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("params"))
 		arg0, err = ec.unmarshalNSignUpInput2githubᚗcomᚋauthorizerdevᚋauthorizerᚋserverᚋgraphᚋmodelᚐSignUpInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["params"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_siwe_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.EvmWalletLoginInput
+	if tmp, ok := rawArgs["params"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("params"))
+		arg0, err = ec.unmarshalNEvmWalletLoginInput2githubᚗcomᚋauthorizerdevᚋauthorizerᚋserverᚋgraphᚋmodelᚐEvmWalletLoginInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -6350,6 +6413,88 @@ func (ec *executionContext) fieldContext_Env_MICROSOFT_ACTIVE_DIRECTORY_TENANT_I
 	return fc, nil
 }
 
+func (ec *executionContext) _Env_ZALO_APP_ID(ctx context.Context, field graphql.CollectedField, obj *model.Env) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Env_ZALO_APP_ID(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ZaloAppID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Env_ZALO_APP_ID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Env",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Env_ZALO_APP_SECRET(ctx context.Context, field graphql.CollectedField, obj *model.Env) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Env_ZALO_APP_SECRET(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ZaloAppSecret, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Env_ZALO_APP_SECRET(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Env",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Env_ORGANIZATION_NAME(ctx context.Context, field graphql.CollectedField, obj *model.Env) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Env_ORGANIZATION_NAME(ctx, field)
 	if err != nil {
@@ -7024,6 +7169,50 @@ func (ec *executionContext) fieldContext_Meta_client_id(ctx context.Context, fie
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Meta_is_zalo_login_enabled(ctx context.Context, field graphql.CollectedField, obj *model.Meta) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Meta_is_zalo_login_enabled(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IsZaloLoginEnabled, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Meta_is_zalo_login_enabled(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Meta",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
 		},
 	}
 	return fc, nil
@@ -7808,6 +7997,77 @@ func (ec *executionContext) fieldContext_Mutation_login(ctx context.Context, fie
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_login_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_siwe(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_siwe(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().Siwe(rctx, fc.Args["params"].(model.EvmWalletLoginInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.AuthResponse)
+	fc.Result = res
+	return ec.marshalNAuthResponse2ᚖgithubᚗcomᚋauthorizerdevᚋauthorizerᚋserverᚋgraphᚋmodelᚐAuthResponse(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_siwe(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "message":
+				return ec.fieldContext_AuthResponse_message(ctx, field)
+			case "should_show_otp_screen":
+				return ec.fieldContext_AuthResponse_should_show_otp_screen(ctx, field)
+			case "access_token":
+				return ec.fieldContext_AuthResponse_access_token(ctx, field)
+			case "id_token":
+				return ec.fieldContext_AuthResponse_id_token(ctx, field)
+			case "refresh_token":
+				return ec.fieldContext_AuthResponse_refresh_token(ctx, field)
+			case "expires_in":
+				return ec.fieldContext_AuthResponse_expires_in(ctx, field)
+			case "user":
+				return ec.fieldContext_AuthResponse_user(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type AuthResponse", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_siwe_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -9743,6 +10003,8 @@ func (ec *executionContext) fieldContext_Query_meta(ctx context.Context, field g
 				return ec.fieldContext_Meta_version(ctx, field)
 			case "client_id":
 				return ec.fieldContext_Meta_client_id(ctx, field)
+			case "is_zalo_login_enabled":
+				return ec.fieldContext_Meta_is_zalo_login_enabled(ctx, field)
 			case "is_google_login_enabled":
 				return ec.fieldContext_Meta_is_google_login_enabled(ctx, field)
 			case "is_facebook_login_enabled":
@@ -10406,6 +10668,10 @@ func (ec *executionContext) fieldContext_Query__env(ctx context.Context, field g
 				return ec.fieldContext_Env_MICROSOFT_CLIENT_SECRET(ctx, field)
 			case "MICROSOFT_ACTIVE_DIRECTORY_TENANT_ID":
 				return ec.fieldContext_Env_MICROSOFT_ACTIVE_DIRECTORY_TENANT_ID(ctx, field)
+			case "ZALO_APP_ID":
+				return ec.fieldContext_Env_ZALO_APP_ID(ctx, field)
+			case "ZALO_APP_SECRET":
+				return ec.fieldContext_Env_ZALO_APP_SECRET(ctx, field)
 			case "ORGANIZATION_NAME":
 				return ec.fieldContext_Env_ORGANIZATION_NAME(ctx, field)
 			case "ORGANIZATION_LOGO":
@@ -15291,6 +15557,42 @@ func (ec *executionContext) unmarshalInputDeleteUserInput(ctx context.Context, o
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputEvmWalletLoginInput(ctx context.Context, obj interface{}) (model.EvmWalletLoginInput, error) {
+	var it model.EvmWalletLoginInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"message", "signature"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "message":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("message"))
+			it.Message, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "signature":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("signature"))
+			it.Signature, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputForgotPasswordInput(ctx context.Context, obj interface{}) (model.ForgotPasswordInput, error) {
 	var it model.ForgotPasswordInput
 	asMap := map[string]interface{}{}
@@ -17657,6 +17959,14 @@ func (ec *executionContext) _Env(ctx context.Context, sel ast.SelectionSet, obj 
 
 			out.Values[i] = ec._Env_MICROSOFT_ACTIVE_DIRECTORY_TENANT_ID(ctx, field, obj)
 
+		case "ZALO_APP_ID":
+
+			out.Values[i] = ec._Env_ZALO_APP_ID(ctx, field, obj)
+
+		case "ZALO_APP_SECRET":
+
+			out.Values[i] = ec._Env_ZALO_APP_SECRET(ctx, field, obj)
+
 		case "ORGANIZATION_NAME":
 
 			out.Values[i] = ec._Env_ORGANIZATION_NAME(ctx, field, obj)
@@ -17825,6 +18135,13 @@ func (ec *executionContext) _Meta(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "is_zalo_login_enabled":
+
+			out.Values[i] = ec._Meta_is_zalo_login_enabled(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "is_google_login_enabled":
 
 			out.Values[i] = ec._Meta_is_google_login_enabled(ctx, field, obj)
@@ -17968,6 +18285,15 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_login(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "siwe":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_siwe(ctx, field)
 			})
 
 			if out.Values[i] == graphql.Null {
@@ -19592,6 +19918,11 @@ func (ec *executionContext) marshalNEnv2ᚖgithubᚗcomᚋauthorizerdevᚋauthor
 		return graphql.Null
 	}
 	return ec._Env(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNEvmWalletLoginInput2githubᚗcomᚋauthorizerdevᚋauthorizerᚋserverᚋgraphᚋmodelᚐEvmWalletLoginInput(ctx context.Context, v interface{}) (model.EvmWalletLoginInput, error) {
+	res, err := ec.unmarshalInputEvmWalletLoginInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNForgotPasswordInput2githubᚗcomᚋauthorizerdevᚋauthorizerᚋserverᚋgraphᚋmodelᚐForgotPasswordInput(ctx context.Context, v interface{}) (model.ForgotPasswordInput, error) {

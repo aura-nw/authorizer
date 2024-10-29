@@ -23,4 +23,6 @@ const (
 	AuthRecipeMethodMicrosoft = "microsoft"
 	// AuthRecipeMethodMicrosoft is the microsoft auth method
 	AuthRecipeMethodZalo = "zalo"
+	// AuthRecipeMethodMobileBasicAuth is the mobile basic_auth method, where user can signup using mobile number and password
+	AuthSIWEAuth = "siwe_auth"
 )

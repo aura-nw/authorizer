@@ -119,6 +119,38 @@ func (p *provider) GetUserByEmail(ctx context.Context, email string) (models.Use
 	return user, nil
 }
 
+// GetVerifiedUserByEmail to get verified user information from database using email address
+func (p *provider) GetVerifiedUserByEmail(ctx context.Context, email string) (models.User, error) {
+	var user models.User
+	result := p.db.Where("email = ?", email).Not("email_verified_at IS NULL").First(&user)
+	if result.Error != nil {
+		return user, result.Error
+	}
+
+	return user, nil
+}
+
+// DeleteUnverifyEmailUser to delete user information from database
+func (p *provider) DeleteUnverifyEmailUsers(ctx context.Context, email string) error {
+	result := p.db.Where("email = ? AND email_verified_at IS NULL", email).Delete(&models.User{})
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+}
+
+// GetUserByWalletAddress to get user information from database using wallet address
+func (p *provider) GetUserByWalletAddress(ctx context.Context, address string) (models.User, error) {
+	var user models.User
+	result := p.db.Where("wallet_address = ?", address).First(&user)
+	if result.Error != nil {
+		return user, result.Error
+	}
+
+	return user, nil
+}
+
 // GetUserByFbId to get user information from database using facebook id
 func (p *provider) GetUserByFbId(ctx context.Context, fbId string) (models.User, error) {
 	var user models.User

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -93,137 +94,72 @@ func OAuthCallbackHandler() gin.HandlerFunc {
 			return
 		}
 
-		existingUser, err := db.Provider.GetUserByEmail(ctx, user.Email)
-
-		if err != nil && provider == constants.AuthRecipeMethodFacebook {
-			existingUser, err = db.Provider.GetUserByFbId(ctx, user.FbId)
-		}
-
-		if err != nil && provider == constants.AuthRecipeMethodZalo {
-			existingUser, err = db.Provider.GetUserByZaloId(ctx, user.ZaloId)
-		}
-
-		log := log.WithField("user", user.Email)
 		isSignUp := false
 
-		if err != nil {
-			isSignupDisabled, err := memorystore.Provider.GetBoolStoreEnvVariable(constants.EnvKeyDisableSignUp)
+		// check oauth user has email
+		log.Debug("User Email: ", user.Email)
+		if user.Email == "<nil>" || user.Email == "" {
+
+			existingUser := models.User{}
+			// if does not have email => create a new user without email
+			if provider == constants.AuthRecipeMethodFacebook {
+				log.Debug("fb id: ", user.FbId)
+				existingUser, err = db.Provider.GetUserByFbId(ctx, user.FbId)
+			}
+
+			if provider == constants.AuthRecipeMethodZalo {
+				log.Debug("zalo id: ", user.ZaloId)
+				existingUser, err = db.Provider.GetUserByZaloId(ctx, user.ZaloId)
+			}
+
 			if err != nil {
-				log.Debug("Failed to get signup disabled env variable: ", err)
-				ctx.JSON(400, gin.H{"error": err.Error()})
-				return
-			}
-			if isSignupDisabled {
-				log.Debug("Failed to signup as disabled")
-				ctx.JSON(400, gin.H{"error": "signup is disabled for this instance"})
-				return
-			}
-			// user not registered, register user and generate session token
-			user.SignupMethods = provider
-			// make sure inputRoles don't include protected roles
-			hasProtectedRole := false
-			for _, ir := range inputRoles {
-				protectedRolesString, err := memorystore.Provider.GetStringStoreEnvVariable(constants.EnvKeyProtectedRoles)
-				protectedRoles := []string{}
+				log.Debug("query existing user err: ", err)
+				log.Debug("register user: ", provider)
+				user, err = insertUser(ctx, provider, user, inputRoles)
 				if err != nil {
-					log.Debug("Failed to get protected roles: ", err)
-					protectedRolesString = ""
-				} else {
-					protectedRoles = strings.Split(protectedRolesString, ",")
-				}
-				if utils.StringSliceContains(protectedRoles, ir) {
-					hasProtectedRole = true
-				}
-			}
-
-			if hasProtectedRole {
-				log.Debug("Signup is not allowed with protected roles:", inputRoles)
-				ctx.JSON(400, gin.H{"error": "invalid role"})
-				return
-			}
-
-			user.Roles = strings.Join(inputRoles, ",")
-
-			if user.Email != "<nil>" {
-				now := time.Now().Unix()
-				user.EmailVerifiedAt = &now
-			}
-			user, _ = db.Provider.AddUser(ctx, user)
-			isSignUp = true
-		} else {
-			user = existingUser
-			if user.Email != "<nil>" && user.EmailVerifiedAt == nil {
-				log.Debug("User email is not verified")
-				ctx.JSON(500, gin.H{"error": "email not verified"})
-				return
-			}
-
-			if user.RevokedTimestamp != nil {
-				log.Debug("User access revoked at: ", user.RevokedTimestamp)
-				ctx.JSON(400, gin.H{"error": "user access has been revoked"})
-				return
-			}
-
-			// user exists in db, check if method was google
-			// if not append google to existing signup method and save it
-			signupMethod := existingUser.SignupMethods
-			if !strings.Contains(signupMethod, provider) {
-				signupMethod = signupMethod + "," + provider
-			}
-			user.SignupMethods = signupMethod
-
-			if user.EmailVerifiedAt == nil && user.Email != "<nil>" {
-				now := time.Now().Unix()
-				user.EmailVerifiedAt = &now
-			}
-
-			// There multiple scenarios with roles here in social login
-			// 1. user has access to protected roles + roles and trying to login
-			// 2. user has not signed up for one of the available role but trying to signup.
-			// 		Need to modify roles in this case
-
-			// find the unassigned roles
-			existingRoles := strings.Split(existingUser.Roles, ",")
-			unasignedRoles := []string{}
-			for _, ir := range inputRoles {
-				if !utils.StringSliceContains(existingRoles, ir) {
-					unasignedRoles = append(unasignedRoles, ir)
-				}
-			}
-
-			if len(unasignedRoles) > 0 {
-				// check if it contains protected unassigned role
-				hasProtectedRole := false
-				for _, ur := range unasignedRoles {
-					protectedRolesString, err := memorystore.Provider.GetStringStoreEnvVariable(constants.EnvKeyProtectedRoles)
-					protectedRoles := []string{}
-					if err != nil {
-						log.Debug("Failed to get protected roles: ", err)
-						protectedRolesString = ""
-					} else {
-						protectedRoles = strings.Split(protectedRolesString, ",")
-					}
-					if utils.StringSliceContains(protectedRoles, ur) {
-						hasProtectedRole = true
-					}
-				}
-
-				if hasProtectedRole {
-					log.Debug("Invalid role. User is using protected unassigned role")
-					ctx.JSON(400, gin.H{"error": "invalid role"})
+					log.Debug("Failed to register user: ", err)
+					ctx.JSON(400, gin.H{"error": err.Error()})
 					return
-				} else {
-					user.Roles = existingUser.Roles + "," + strings.Join(unasignedRoles, ",")
 				}
+				isSignUp = true
 			} else {
-				user.Roles = existingUser.Roles
+				user = existingUser
+				log.Debug("find user ok")
+				log.Debug("userId: ", existingUser.ID)
 			}
 
-			user, err = db.Provider.UpdateUser(ctx, user)
+		} else {
+			log.Debug("find verified email record")
+
+			// else find verified email record
+			existingUser, err := db.Provider.GetVerifiedUserByEmail(ctx, user.Email)
 			if err != nil {
-				log.Debug("Failed to update user: ", err)
-				ctx.JSON(500, gin.H{"error": err.Error()})
-				return
+
+				log.Debug("delete all unverify email record on db and insert new one with verified email")
+				// delete all unverify email record on db and insert new one with verified email
+				err = db.Provider.DeleteUnverifyEmailUsers(ctx, user.Email)
+				if err != nil {
+					log.Debug("Failed to delete unverify user: ", err)
+					ctx.JSON(500, gin.H{"error": err.Error()})
+					return
+				}
+
+				user, err = insertUser(ctx, provider, user, inputRoles)
+				if err != nil {
+					log.Debug("Failed to register user: ", err)
+					ctx.JSON(500, gin.H{"error": err.Error()})
+					return
+				}
+				isSignUp = true
+			} else {
+				log.Debug("update existing user")
+				// update existing user
+				user, err = updateUser(ctx, provider, existingUser, inputRoles)
+				if err != nil {
+					log.Debug("Failed to register user: ", err)
+					ctx.JSON(500, gin.H{"error": err.Error()})
+					return
+				}
 			}
 		}
 
@@ -312,8 +248,6 @@ func processZaloUserInfo(code string) (models.User, error) {
 	client := http.Client{}
 
 	// get access_token
-	fmt.Println(oauth.OAuthProviders.ZaloConfig.ClientID)
-
 	reqBody := url.Values{}
 	reqBody.Set("code", code)
 	reqBody.Set("app_id", oauth.OAuthProviders.ZaloConfig.ClientID)
@@ -818,5 +752,118 @@ func processMicrosoftUserInfo(code string) (models.User, error) {
 		return user, fmt.Errorf("unable to extract claims")
 	}
 
+	return user, nil
+}
+
+func updateUser(ctx *gin.Context, provider string, user models.User, inputRoles []string) (models.User, error) {
+	if user.RevokedTimestamp != nil {
+		log.Debug("User access revoked at: ", user.RevokedTimestamp)
+		// ctx.JSON(400, gin.H{"error": "user access has been revoked"})
+		return user, errors.New("user access has been revoked")
+	}
+
+	// user exists in db, check if method was google
+	// if not append google to existing signup method and save it
+	signupMethod := user.SignupMethods
+	if !strings.Contains(signupMethod, provider) {
+		signupMethod = signupMethod + "," + provider
+	}
+	user.SignupMethods = signupMethod
+
+	// There multiple scenarios with roles here in social login
+	// 1. user has access to protected roles + roles and trying to login
+	// 2. user has not signed up for one of the available role but trying to signup.
+	// 		Need to modify roles in this case
+
+	// find the unassigned roles
+	existingRoles := strings.Split(user.Roles, ",")
+	unasignedRoles := []string{}
+	for _, ir := range inputRoles {
+		if !utils.StringSliceContains(existingRoles, ir) {
+			unasignedRoles = append(unasignedRoles, ir)
+		}
+	}
+
+	if len(unasignedRoles) > 0 {
+		// check if it contains protected unassigned role
+		hasProtectedRole := false
+		for _, ur := range unasignedRoles {
+			protectedRolesString, err := memorystore.Provider.GetStringStoreEnvVariable(constants.EnvKeyProtectedRoles)
+			protectedRoles := []string{}
+			if err != nil {
+				log.Debug("Failed to get protected roles: ", err)
+				protectedRolesString = ""
+			} else {
+				protectedRoles = strings.Split(protectedRolesString, ",")
+			}
+			if utils.StringSliceContains(protectedRoles, ur) {
+				hasProtectedRole = true
+			}
+		}
+
+		if hasProtectedRole {
+			log.Debug("Invalid role. User is using protected unassigned role")
+			// ctx.JSON(400, gin.H{"error": "invalid role"})
+			return user, errors.New("invalid role")
+		} else {
+			user.Roles = user.Roles + "," + strings.Join(unasignedRoles, ",")
+		}
+	} else {
+		user.Roles = user.Roles
+	}
+
+	user, err := db.Provider.UpdateUser(ctx, user)
+	if err != nil {
+		log.Debug("Failed to update user: ", err)
+		// ctx.JSON(500, gin.H{"error": err.Error()})
+		return user, errors.New("failed to update user")
+	}
+
+	return user, nil
+}
+
+func insertUser(ctx *gin.Context, provider string, user models.User, inputRoles []string) (models.User, error) {
+	isSignupDisabled, err := memorystore.Provider.GetBoolStoreEnvVariable(constants.EnvKeyDisableSignUp)
+	if err != nil {
+		log.Debug("Failed to get signup disabled env variable: ", err)
+		// ctx.JSON(400, gin.H{"error": err.Error()})
+		return user, err
+	}
+	if isSignupDisabled {
+		log.Debug("Failed to signup as disabled")
+		// ctx.JSON(400, gin.H{"error": "signup is disabled for this instance"})
+		return user, errors.New("signup is disabled for this instance")
+	}
+	// user not registered, register user and generate session token
+	user.SignupMethods = provider
+	// make sure inputRoles don't include protected roles
+	hasProtectedRole := false
+	for _, ir := range inputRoles {
+		protectedRolesString, err := memorystore.Provider.GetStringStoreEnvVariable(constants.EnvKeyProtectedRoles)
+		protectedRoles := []string{}
+		if err != nil {
+			log.Debug("Failed to get protected roles: ", err)
+			protectedRolesString = ""
+		} else {
+			protectedRoles = strings.Split(protectedRolesString, ",")
+		}
+		if utils.StringSliceContains(protectedRoles, ir) {
+			hasProtectedRole = true
+		}
+	}
+
+	if hasProtectedRole {
+		log.Debug("Signup is not allowed with protected roles:", inputRoles)
+		// ctx.JSON(400, gin.H{"error": "invalid role"})
+		return user, errors.New("invalid role")
+	}
+
+	user.Roles = strings.Join(inputRoles, ",")
+
+	if user.Email != "<nil>" && user.Email != "" {
+		now := time.Now().Unix()
+		user.EmailVerifiedAt = &now
+	}
+	user, _ = db.Provider.AddUser(ctx, user)
 	return user, nil
 }

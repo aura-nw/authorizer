@@ -85,6 +85,14 @@ func VerifyEmailResolver(ctx context.Context, params model.VerifyEmailInput) (*m
 	}
 
 	roles := strings.Split(user.Roles, ",")
+
+	creator, err := db.Provider.GetCreatorByEmail(ctx, user.Email)
+	fmt.Println(creator)
+	if err == nil {
+		roles = append(roles, "creator")
+		user.Roles = strings.Join(roles, ",")
+	}
+
 	scope := []string{"openid", "email", "profile"}
 	code := ""
 	// Not required as /oauth/token cannot be resumed from other tab

@@ -25,6 +25,7 @@ type User struct {
 	Nickname                 *string `json:"nickname" bson:"nickname" cql:"nickname" dynamo:"nickname"`
 	FbId                     string  `json:"fb_id" bson:"fb_id" cql:"fb_id" dynamo:"fb_id" index:"fb_id,hash"`
 	ZaloId                   string  `json:"zalo_id" bson:"zalo_id" cql:"zalo_id" dynamo:"zalo_id" index:"zalo_id,hash"`
+	WalletAddress            *string `json:"wallet_address" bson:"wallet_address" cql:"wallet_address" dynamo:"wallet_address"`
 	Gender                   *string `json:"gender" bson:"gender" cql:"gender" dynamo:"gender"`
 	Birthdate                *string `json:"birthdate" bson:"birthdate" cql:"birthdate" dynamo:"birthdate"`
 	PhoneNumber              *string `gorm:"index" json:"phone_number" bson:"phone_number" cql:"phone_number" dynamo:"phone_number"`

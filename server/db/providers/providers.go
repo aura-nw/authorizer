@@ -18,8 +18,6 @@ type Provider interface {
 	ListUsers(ctx context.Context, pagination model.Pagination) (*model.Users, error)
 	// GetUserByEmail to get user information from database using email address
 	GetUserByEmail(ctx context.Context, email string) (models.User, error)
-	// GetCreatorByEmail to get creator information from database using email address
-	GetCreatorByEmail(ctx context.Context, email string) (models.Creator, error)
 	// GetVerifiedUserByEmail to get verified user information from database using email address
 	GetVerifiedUserByEmail(ctx context.Context, email string) (models.User, error)
 	// DeleteUnverifyEmailUsers to delete unverify users information from database
